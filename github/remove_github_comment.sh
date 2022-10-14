@@ -8,29 +8,26 @@ usage() {
   echo "Example:"
   echo "  remove_github_comment.sh \"## Manifest Diff\""
 }
-
+usage
 COMMENT_TEMPLATE=$1
 
-issues_api_url="https://api.github.com/repos/$GITHUB_PROJECT_USERNAME/$GITHUB_PROJECT_NAME/issues/"
-echo "Searching for issues to remove in PullRequest $PULL_REQUEST_ID with Template $COMMENT_TEMPLATE ..."
+echo "Searching for comments to remove in PullRequest $PULL_REQUEST_ID with Template $COMMENT_TEMPLATE ..."
+issues_api_curl="repos/$GITHUB_PROJECT_USERNAME/$GITHUB_PROJECT_NAME/issues"
 
-curl \
-  -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_TOKEN" \
-  "$issues_api_url/$PULL_REQUEST_ID/comments" >github_issues.json
+#https://docs.github.com/en/rest/issues/comments#list-issue-comments
+gh api "$issues_api_curl/742/comments" \
+  -X GET \
+  --jq "[ .[] | select( .body | contains(\"$COMMENT_TEMPLATE\")) ] | .[] .id" >comments_to_delete
 
-cat github_issues.json
+echo "Found next comments to remove:"
+cat comments_to_delete
 
-jq -c "[ .[] | select( .body | contains(\"$COMMENT_TEMPLATE\")) ] | .[] .id" github_issues.json >issues_to_delete
-
-echo "Found next issues to remove:"
-cat issues_to_delete
-
-echo "Starting removing issues from the list..."
+echo "Starting removing comments from the list..."
 while read -r line; do
-  echo "Removing issue #$line"
-  curl \
-    -X DELETE \
-    -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_TOKEN" \
-    "$issues_api_url/comments/$line" ||
-    echo "Unable to remove issue #$line"
-done <issues_to_delete
+  remove_comment_url="$issues_api_curl/comments/$line"
+  echo "Removing comment #$line, url=$remove_comment_url"
+  #https://docs.github.com/en/rest/issues/comments#delete-an-issue-comment
+  gh api "$remove_comment_url" -X DELETE || echo "Unable to remove issue #$line"
+done <comments_to_delete
+
+rm -f comments_to_delete
