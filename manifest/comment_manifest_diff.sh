@@ -1,7 +1,6 @@
 #!/bin/bash
 
 BUILD_TYPE=$1
-manifest_diff_file="/manifest.diff"
 
 usage() {
   echo "Find a diff between baseline and a current manifest. Then post it to github"
@@ -13,30 +12,31 @@ usage() {
 
 capture_diffs() {
   echo "Capturing $BUILD_TYPE merged manifest diffs..."
-  cd "$MANIFESTS_WORKSPACE_DIR/$BUILD_TYPE" || exit 2
-  {
-  printf "## Manifest Diff:\n"
-  for dir in */; do
-      echo "### $dir"
-      printf "\n\`\`\`diff\n"
-      diff "$WIKI_DIR/manifests/$BUILD_TYPE/$dir/AndroidManifest-sorted.xml" "$dir/AndroidManifest-sorted.xml"
-      printf "\n\`\`\`\n"
+  manifest_dir="$MANIFESTS_WORKSPACE_DIR/$BUILD_TYPE"
+  printf "## Manifest Diff:\n" >> manifest.diff
+  for dir in "$manifest_dir"/*; do
+      basename=$(basename "$dir")
+      echo "process dir $basename"
+      {
+        echo "### $basename"
+        printf "\n\`\`\`diff\n"
+        diff "$WIKI_DIR/manifests/$BUILD_TYPE/$basename/AndroidManifest-sorted.xml" "$dir/AndroidManifest-sorted.xml"
+        printf "\n\`\`\`\n"
+      } >> manifest.diff
   done
-  } >> $manifest_diff_file
-  cd ..
+
 }
 
 post_comment() {
   echo "Commenting on PR: $PULL_REQUEST_URL"
-  gh pr comment "$PULL_REQUEST_ID" -F "$manifest_diff_file" || {
+  gh pr comment "$PULL_REQUEST_ID" -F manifest.diff || {
     echo "Failed to comment to pr $PULL_REQUEST_URL"
     exit 1
   }
 }
 
-usage
 ./ci/github/remove_github_comment.sh "## Manifest Diff"
 capture_diffs
 post_comment
 
-rm -f $manifest_diff_file
+rm -f manifest.diff

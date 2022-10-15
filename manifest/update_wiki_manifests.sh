@@ -11,13 +11,12 @@ usage() {
 
 update_wiki_manifests() {
   echo "Updating $BUILD_TYPE manifests for all apps..."
-  cd "${MANIFESTS_WORKSPACE_DIR}/$BUILD_TYPE" || exit 2
-  for dir in */; do
-    echo "$dir"
-    mkdir -p "$WIKI_DIR/manifests/$BUILD_TYPE/$dir"
-    cp "$dir/AndroidManifest-sorted.xml" "$WIKI_DIR/manifests/$BUILD_TYPE/$dir/."
+  manifest_dir="$MANIFESTS_WORKSPACE_DIR/$BUILD_TYPE"
+  for dir in "$manifest_dir"/*; do
+    basename=$(basename "$dir")
+    mkdir -p "$WIKI_DIR/manifests/$BUILD_TYPE/$basename"
+    cp "$dir/AndroidManifest-sorted.xml" "$WIKI_DIR/manifests/$BUILD_TYPE/$basename/."
   done
-  cd ..
 }
 
 usage

@@ -36,12 +36,14 @@ def get_attribute(node: Element):
 
 
 def sort_tree(node: Element):
-    for item in node:
-        sort_tree(item)
     node[:] = sorted(node, key=lambda child: (
         get_sorting_weight(child),
         child.tag,
         get_attribute(child)))
+    if node.text is not None:
+        node.text = node.text.strip()
+    for item in node:
+        sort_tree(item)
 
 
 def register_all_namespaces(filename):
@@ -58,7 +60,7 @@ root: Element = tree.getroot()
 sort_tree(root)
 
 output = Tree \
-    .tostring(root, encoding="utf-8", method="xml") \
+    .tostring(root, encoding="utf-8", method="xml", short_empty_elements=True) \
     .decode()
 
 # write result to file
